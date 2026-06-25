@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, engine, SessionLocal
-from app.routers import auth, goals, habits, tasks, finance, health, journal, dashboard, reports, analytics
+from app.routers import auth, goals, habits, tasks, finance, health, journal, dashboard, reports, analytics, users
 from app.utils.security import get_password_hash
 from app.config import settings
 import logging
@@ -35,6 +35,8 @@ app.include_router(health.router, prefix="/api/v1")
 app.include_router(journal.router, prefix="/api/v1")
 app.include_router(reports.router, prefix="/api/v1")
 app.include_router(analytics.router, prefix="/api/v1")
+app.include_router(users.router, prefix="/api/v1")
+app.include_router(users.router, prefix="/api/v1")
 
 
 @app.on_event("startup")
@@ -50,10 +52,16 @@ def startup():
                 username=settings.FIRST_USER_USERNAME,
                 full_name=settings.FIRST_USER_FULLNAME,
                 hashed_password=get_password_hash(settings.FIRST_USER_PASSWORD),
+                is_admin=True,
             )
             db.add(user)
             db.commit()
-            logger.info(f"Created initial user: {settings.FIRST_USER_USERNAME}")
+            logger.info(f"Created initial admin user: {settings.FIRST_USER_USERNAME}")
+        else:
+            # Ensure first user is always admin
+            if not existing.is_admin:
+                existing.is_admin = True
+                db.commit()
     finally:
         db.close()
 

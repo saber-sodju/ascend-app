@@ -15,6 +15,7 @@ class User(Base):
     full_name = Column(String, nullable=True)
     hashed_password = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
+    is_admin = Column(Boolean, default=False)
     theme = Column(String, default="dark")
     target_weight = Column(String, nullable=True)
     language = Column(String, default="ru")

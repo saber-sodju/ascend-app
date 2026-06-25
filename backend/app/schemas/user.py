@@ -24,12 +24,23 @@ class UserUpdate(BaseModel):
 class UserResponse(UserBase):
     id: uuid.UUID
     is_active: bool
+    is_admin: bool
     theme: str
     language: str
     created_at: datetime
 
     class Config:
         from_attributes = True
+
+
+class AdminUserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    is_active: Optional[bool] = None
+    new_password: Optional[str] = None
+
+
+class AdminPasswordReset(BaseModel):
+    new_password: str
 
 
 class LoginRequest(BaseModel):

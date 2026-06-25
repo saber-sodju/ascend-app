@@ -33,6 +33,14 @@ export const authAPI = {
   changePassword: (data: any) => api.post("/auth/change-password", data),
 };
 
+// Users (admin)
+export const usersAPI = {
+  list: () => api.get("/users"),
+  create: (data: any) => api.post("/users", data),
+  update: (id: string, data: any) => api.put(`/users/${id}`, data),
+  delete: (id: string) => api.delete(`/users/${id}`),
+};
+
 // Dashboard
 export const dashboardAPI = {
   get: () => api.get("/dashboard"),

@@ -4,6 +4,7 @@ export interface User {
   username: string;
   full_name: string | null;
   is_active: boolean;
+  is_admin: boolean;
   theme: string;
   language: string;
   created_at: string;

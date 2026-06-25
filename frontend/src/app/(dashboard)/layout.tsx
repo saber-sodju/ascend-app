@@ -6,7 +6,7 @@ import Link from "next/link";
 import {
   LayoutDashboard, Target, Repeat2, CheckSquare, Wallet,
   Heart, BookOpen, BarChart3, TrendingUp, Settings, LogOut,
-  Menu, X,
+  Menu, X, Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -111,6 +111,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Bottom */}
       <div className="border-t border-border/60 pt-3 mt-3 space-y-0.5">
+        {(user as any)?.is_admin && (
+          <Link
+            href="/users"
+            onClick={() => setSidebarOpen(false)}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all",
+              pathname === "/users"
+                ? "bg-primary/15 text-primary border border-primary/20"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+            )}
+          >
+            <Users className={cn("w-4 h-4", pathname === "/users" ? "text-primary" : "")} />
+            <span>Пользователи</span>
+          </Link>
+        )}
         <Link
           href="/settings"
           onClick={() => setSidebarOpen(false)}
