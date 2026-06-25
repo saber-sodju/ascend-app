@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { goalsAPI } from "@/lib/api";
-import { Goal, GoalCategory, GoalStatus } from "@/types";
+import { Goal, GoalCategory, GoalStatus, Priority } from "@/types";
 import { GOAL_CATEGORIES, STATUS_CONFIG, PRIORITY_CONFIG, formatDate, cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 import {
