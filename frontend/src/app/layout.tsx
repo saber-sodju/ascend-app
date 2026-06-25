@@ -3,18 +3,22 @@ import "./globals.css";
 import { Toaster } from "react-hot-toast";
 
 export const metadata: Metadata = {
-  title: "Life Manager",
-  description: "Твоя персональная система управления жизнью",
+  title: "ASCEND",
+  description: "Персональная система управления жизнью",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Life Manager",
+    title: "ASCEND",
+  },
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon.svg",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#6366f1",
+  themeColor: "#D4A63A",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
