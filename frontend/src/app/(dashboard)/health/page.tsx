@@ -1,11 +1,194 @@
 "use client";
 import { useEffect, useState } from "react";
-import { healthAPI } from "@/lib/api";
+import { healthAPI, authAPI } from "@/lib/api";
 import { WeightLog, HealthLog, ActivityLog } from "@/types";
 import { formatDateShort, todayStr, ACTIVITY_TYPES } from "@/lib/utils";
+import { useAuthStore } from "@/lib/store";
 import toast from "react-hot-toast";
-import { Scale, Droplets, Moon, Zap, Plus, Trash2, X, Loader2, Check, Activity } from "lucide-react";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
+import { Scale, Droplets, Moon, Zap, Plus, Trash2, X, Loader2, Check, Activity, Target, TrendingDown, TrendingUp, Edit2 } from "lucide-react";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+
+function WeightGoalCard({ summary, weightLogs, onUpdate }: { summary: any; weightLogs: WeightLog[]; onUpdate: () => void }) {
+  const { updateUser } = useAuthStore();
+  const [editing, setEditing] = useState(false);
+  const [targetInput, setTargetInput] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const currentWeight = summary?.latest_weight;
+  const targetWeight = summary?.target_weight ? Number(summary.target_weight) : null;
+  const startWeight = weightLogs.length > 0 ? weightLogs[weightLogs.length - 1].weight : currentWeight;
+
+  const isLosing = targetWeight !== null && startWeight !== null && targetWeight < startWeight;
+  const isGaining = targetWeight !== null && startWeight !== null && targetWeight > startWeight;
+
+  let progress = 0;
+  let remaining = 0;
+  if (targetWeight && currentWeight && startWeight) {
+    remaining = Math.abs(targetWeight - currentWeight);
+    if (isLosing) {
+      const total = startWeight - targetWeight;
+      const done = startWeight - currentWeight;
+      progress = total > 0 ? Math.min(100, Math.max(0, (done / total) * 100)) : 0;
+    } else if (isGaining) {
+      const total = targetWeight - startWeight;
+      const done = currentWeight - startWeight;
+      progress = total > 0 ? Math.min(100, Math.max(0, (done / total) * 100)) : 0;
+    }
+  }
+
+  const handleSave = async () => {
+    if (!targetInput) return;
+    setSaving(true);
+    try {
+      const res = await authAPI.updateMe({ target_weight: targetInput });
+      updateUser(res.data);
+      toast.success("Цель установлена!");
+      setEditing(false);
+      onUpdate();
+    } catch { toast.error("Ошибка"); }
+    finally { setSaving(false); }
+  };
+
+  const progressColor = isLosing ? "#10b981" : isGaining ? "#6366f1" : "#D4A63A";
+  const circumference = 2 * Math.PI * 54;
+  const strokeDash = circumference - (progress / 100) * circumference;
+
+  return (
+    <div className="glass rounded-2xl p-6">
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-primary/15">
+            <Target className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h3 className="font-semibold">Цель по весу</h3>
+            <p className="text-xs text-muted-foreground">
+              {isLosing ? "Похудеть" : isGaining ? "Набрать вес" : targetWeight ? "Поддержание" : "Цель не установлена"}
+            </p>
+          </div>
+        </div>
+        <button onClick={() => { setEditing(true); setTargetInput(targetWeight?.toString() || ""); }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs bg-secondary hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+          <Edit2 className="w-3.5 h-3.5" />
+          {targetWeight ? "Изменить цель" : "Установить цель"}
+        </button>
+      </div>
+
+      {!targetWeight ? (
+        <div className="flex flex-col items-center py-6 text-center gap-3">
+          <Scale className="w-10 h-10 text-muted-foreground/40" />
+          <p className="text-sm text-muted-foreground">Установи целевой вес чтобы отслеживать прогресс</p>
+          <button onClick={() => { setEditing(true); setTargetInput(""); }}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:opacity-90">
+            Установить цель
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-6">
+          {/* Circular progress */}
+          <div className="relative flex-shrink-0">
+            <svg width="128" height="128" viewBox="0 0 128 128">
+              <circle cx="64" cy="64" r="54" fill="none" stroke="hsl(218 15% 17%)" strokeWidth="10" />
+              <circle cx="64" cy="64" r="54" fill="none" stroke={progressColor} strokeWidth="10"
+                strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeDash}
+                transform="rotate(-90 64 64)" style={{ transition: "stroke-dashoffset 0.8s ease" }} />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-2xl font-bold">{Math.round(progress)}%</span>
+              <span className="text-[10px] text-muted-foreground">прогресс</span>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className="flex-1 space-y-3">
+            <div className="flex items-center justify-between py-2 border-b border-border/50">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Scale className="w-3.5 h-3.5" /> Начальный вес
+              </div>
+              <span className="text-sm font-semibold">{startWeight} кг</span>
+            </div>
+            <div className="flex items-center justify-between py-2 border-b border-border/50">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                {isLosing ? <TrendingDown className="w-3.5 h-3.5 text-emerald-400" /> : <TrendingUp className="w-3.5 h-3.5 text-indigo-400" />}
+                Текущий вес
+              </div>
+              <span className="text-sm font-bold" style={{ color: progressColor }}>{currentWeight ?? "—"} кг</span>
+            </div>
+            <div className="flex items-center justify-between py-2 border-b border-border/50">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Target className="w-3.5 h-3.5 text-primary" /> Цель
+              </div>
+              <span className="text-sm font-semibold">{targetWeight} кг</span>
+            </div>
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-xs text-muted-foreground">Осталось</span>
+              <span className="text-sm font-bold text-primary">
+                {remaining > 0 ? `${remaining.toFixed(1)} кг` : "🎉 Цель достигнута!"}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Progress bar */}
+      {targetWeight && (
+        <div className="mt-4">
+          <div className="h-2 bg-secondary rounded-full overflow-hidden">
+            <div className="h-full rounded-full transition-all duration-700"
+              style={{ width: `${progress}%`, background: progressColor }} />
+          </div>
+          <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+            <span>{startWeight} кг</span>
+            <span>{targetWeight} кг</span>
+          </div>
+        </div>
+      )}
+
+      {/* Edit modal */}
+      {editing && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Целевой вес</h2>
+              <button onClick={() => setEditing(false)} className="p-1 hover:bg-secondary rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="flex flex-col gap-3">
+              <div className="flex gap-3">
+                <button onClick={() => {}} className="flex-1 py-3 rounded-xl border-2 border-emerald-500/50 bg-emerald-500/10 text-emerald-400 text-sm font-medium flex items-center justify-center gap-2">
+                  <TrendingDown className="w-4 h-4" /> Похудеть
+                </button>
+                <button onClick={() => {}} className="flex-1 py-3 rounded-xl border-2 border-indigo-500/50 bg-indigo-500/10 text-indigo-400 text-sm font-medium flex items-center justify-center gap-2">
+                  <TrendingUp className="w-4 h-4" /> Набрать
+                </button>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1.5 block">Целевой вес (кг)</label>
+                <div className="relative">
+                  <input type="number" step="0.1" value={targetInput} onChange={e => setTargetInput(e.target.value)}
+                    placeholder="70.0" className="w-full px-4 py-3 bg-secondary border border-border rounded-xl text-xl font-bold text-center focus:outline-none focus:ring-2 focus:ring-primary" />
+                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">кг</span>
+                </div>
+                {currentWeight && targetInput && (
+                  <p className="text-xs text-muted-foreground mt-1.5 text-center">
+                    {Number(targetInput) < currentWeight
+                      ? `Похудеть на ${(currentWeight - Number(targetInput)).toFixed(1)} кг`
+                      : Number(targetInput) > currentWeight
+                      ? `Набрать ${(Number(targetInput) - currentWeight).toFixed(1)} кг`
+                      : "Поддержание текущего веса"}
+                  </p>
+                )}
+              </div>
+            </div>
+            <button onClick={handleSave} disabled={saving || !targetInput}
+              className="w-full py-2.5 bg-primary text-primary-foreground rounded-xl font-medium text-sm hover:opacity-90 disabled:opacity-50">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : "Сохранить цель"}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function QuickLog({ onSave }: { onSave: () => void }) {
   const [form, setForm] = useState({ sleep_hours: "", water_ml: "", energy_level: "" });
@@ -222,6 +405,9 @@ export default function HealthPage() {
           ))}
         </div>
       )}
+
+      {/* Weight Goal */}
+      {summary && <WeightGoalCard summary={summary} weightLogs={weightLogs} onUpdate={load} />}
 
       {/* Quick log */}
       <QuickLog onSave={load} />
