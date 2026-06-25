@@ -4,6 +4,7 @@ from app.database import Base, engine, SessionLocal
 from app.routers import auth, goals, habits, tasks, finance, health, journal, dashboard, reports, analytics, users
 from app.utils.security import get_password_hash
 from app.config import settings
+from sqlalchemy import text
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -44,6 +45,13 @@ def startup():
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
+        # Add is_admin column if it doesn't exist (migration)
+        try:
+            db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE"))
+            db.commit()
+        except Exception:
+            db.rollback()
+
         from app.models.user import User
         existing = db.query(User).first()
         if not existing:
