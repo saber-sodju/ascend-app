@@ -134,3 +134,10 @@ def add_milestone(goal_id: uuid.UUID, data: MilestoneCreate, db: Session = Depen
     db.commit()
     db.refresh(m)
     return m
+
+
+@router.delete("/clear")
+def clear_all_goals(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    db.query(Goal).filter(Goal.user_id == current_user.id).delete()
+    db.commit()
+    return {"message": "Все цели удалены"}

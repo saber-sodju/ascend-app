@@ -206,3 +206,12 @@ def get_monthly_chart(year: int = None, db: Session = Depends(get_db), current_u
         expense = sum(t.amount for t in txs if t.type == TransactionType.expense)
         result.append({"month": m, "income": income, "expense": expense, "savings": income - expense})
     return result
+
+
+@router.delete("/clear")
+def clear_all_finance(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    db.query(Transaction).filter(Transaction.user_id == current_user.id).delete()
+    db.query(Budget).filter(Budget.user_id == current_user.id).delete()
+    db.query(SavingsGoal).filter(SavingsGoal.user_id == current_user.id).delete()
+    db.commit()
+    return {"message": "Все финансовые данные удалены"}

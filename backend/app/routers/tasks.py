@@ -93,3 +93,10 @@ def get_today_tasks(db: Session = Depends(get_db), current_user: User = Depends(
         Task.status != TaskStatus.completed
     ).order_by(Task.order).all()
     return tasks
+
+
+@router.delete("/clear")
+def clear_all_tasks(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    db.query(Task).filter(Task.user_id == current_user.id).delete()
+    db.commit()
+    return {"message": "Все задачи удалены"}

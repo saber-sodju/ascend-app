@@ -160,3 +160,10 @@ def get_habits_heatmap(
             "logs": {str(l.date): l.completed for l in logs}
         }
     return result
+
+
+@router.delete("/clear")
+def clear_all_habits(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    db.query(Habit).filter(Habit.user_id == current_user.id).delete()
+    db.commit()
+    return {"message": "Все привычки удалены"}

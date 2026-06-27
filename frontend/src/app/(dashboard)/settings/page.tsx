@@ -1,9 +1,9 @@
 "use client";
 import { useState } from "react";
 import { useAuthStore } from "@/lib/store";
-import { authAPI } from "@/lib/api";
+import { authAPI, clearAPI } from "@/lib/api";
 import toast from "react-hot-toast";
-import { User, Lock, Palette, Download, Upload, Loader2, Check, Moon, Sun, Scale } from "lucide-react";
+import { User, Lock, Palette, Download, Upload, Loader2, Check, Moon, Sun, Scale, AlertTriangle, Trash2 } from "lucide-react";
 
 export default function SettingsPage() {
   const { user, updateUser } = useAuthStore();
@@ -45,6 +45,14 @@ export default function SettingsPage() {
 
   const exportData = () => {
     toast.success("Экспорт данных скоро будет доступен");
+  };
+
+  const handleClear = async (label: string, fn: () => Promise<any>) => {
+    if (!confirm(`Удалить все данные раздела "${label}"? Это действие необратимо!`)) return;
+    try {
+      await fn();
+      toast.success(`${label} — данные очищены`);
+    } catch { toast.error("Ошибка при очистке"); }
   };
 
   return (
@@ -146,6 +154,44 @@ export default function SettingsPage() {
           </button>
         </div>
         <p className="text-xs text-muted-foreground mt-3">Экспортируй все данные для резервного копирования</p>
+      </div>
+
+      {/* Danger Zone */}
+      <div className="rounded-2xl p-6 border border-red-500/30 bg-red-500/5">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="p-2.5 rounded-xl bg-red-500/15"><AlertTriangle className="w-5 h-5 text-red-400" /></div>
+          <div>
+            <h3 className="font-semibold text-red-400">Опасная зона</h3>
+            <p className="text-xs text-muted-foreground">Эти действия необратимы — данные нельзя восстановить</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {[
+            { label: "Цели", fn: clearAPI.goals },
+            { label: "Задачи", fn: clearAPI.tasks },
+            { label: "Привычки", fn: clearAPI.habits },
+            { label: "Финансы", fn: clearAPI.finance },
+            { label: "Здоровье", fn: clearAPI.health },
+            { label: "Дневник", fn: clearAPI.journal },
+          ].map(({ label, fn }) => (
+            <button key={label} onClick={() => handleClear(label, fn)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-red-500/30 text-sm text-red-400 hover:bg-red-500/10 transition-colors">
+              <Trash2 className="w-4 h-4" /> Очистить {label}
+            </button>
+          ))}
+        </div>
+        <div className="mt-4 pt-4 border-t border-red-500/20">
+          <button onClick={async () => {
+            if (!confirm("УДАЛИТЬ ВСЕ ДАННЫЕ? Цели, задачи, привычки, финансы, здоровье, дневник — всё будет стёрто!")) return;
+            if (!confirm("Последнее предупреждение! Восстановить данные будет невозможно. Продолжить?")) return;
+            try {
+              await Promise.all([clearAPI.goals(), clearAPI.tasks(), clearAPI.habits(), clearAPI.finance(), clearAPI.health(), clearAPI.journal()]);
+              toast.success("Все данные очищены");
+            } catch { toast.error("Ошибка"); }
+          }} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-red-500/20 border border-red-500/40 text-red-400 text-sm font-medium hover:bg-red-500/30 transition-colors">
+            <Trash2 className="w-4 h-4" /> Сбросить все данные
+          </button>
+        </div>
       </div>
 
       {/* About */}

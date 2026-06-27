@@ -96,3 +96,10 @@ def get_mood_chart(days: int = 30, db: Session = Depends(get_db), current_user: 
         JournalEntry.date >= start
     ).order_by(JournalEntry.date).all()
     return [{"date": str(e.date), "mood": e.mood, "energy": e.energy, "productivity": e.productivity} for e in entries]
+
+
+@router.delete("/clear")
+def clear_all_journal(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    db.query(JournalEntry).filter(JournalEntry.user_id == current_user.id).delete()
+    db.commit()
+    return {"message": "Все записи дневника удалены"}

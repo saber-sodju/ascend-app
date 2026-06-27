@@ -138,3 +138,13 @@ def get_health_summary(db: Session = Depends(get_db), current_user: User = Depen
         avg_water=int(sum(water_vals) / len(water_vals)) if water_vals else None,
         avg_energy=round(sum(energy_vals) / len(energy_vals), 1) if energy_vals else None,
     )
+
+
+@router.delete("/clear")
+def clear_all_health(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    db.query(WeightLog).filter(WeightLog.user_id == current_user.id).delete()
+    db.query(ActivityLog).filter(ActivityLog.user_id == current_user.id).delete()
+    db.query(HealthLog).filter(HealthLog.user_id == current_user.id).delete()
+    db.query(BodyMeasurement).filter(BodyMeasurement.user_id == current_user.id).delete()
+    db.commit()
+    return {"message": "Все данные здоровья удалены"}

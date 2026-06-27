@@ -33,6 +33,16 @@ export const authAPI = {
   changePassword: (data: any) => api.post("/auth/change-password", data),
 };
 
+// Clear / Reset data
+export const clearAPI = {
+  goals: () => api.delete("/goals/clear"),
+  tasks: () => api.delete("/tasks/clear"),
+  habits: () => api.delete("/habits/clear"),
+  finance: () => api.delete("/finance/clear"),
+  health: () => api.delete("/health/clear"),
+  journal: () => api.delete("/journal/clear"),
+};
+
 // Users (admin)
 export const usersAPI = {
   list: () => api.get("/users"),
