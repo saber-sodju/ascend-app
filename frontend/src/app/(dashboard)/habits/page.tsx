@@ -7,6 +7,8 @@ import toast from "react-hot-toast";
 import { Plus, Flame, Check, X, Loader2, Edit3, Trash2, Calendar, TrendingUp } from "lucide-react";
 import { format, subDays, parseISO } from "date-fns";
 import { ru } from "date-fns/locale";
+import { showAchievementUnlockToasts } from "@/components/shared/AchievementUnlockToast";
+import { useAuthStore } from "@/lib/store";
 
 const ICONS = ["⭐", "💪", "📚", "🏃", "🧘", "💧", "🛌", "🎯", "🥗", "☀️", "🧠", "💊", "✍️", "🎵", "🙏"];
 const COLORS = ["#6366f1", "#22c55e", "#f59e0b", "#ec4899", "#14b8a6", "#ef4444", "#8b5cf6", "#06b6d4", "#f97316"];
@@ -36,6 +38,8 @@ function HabitModal({ habit, onClose, onSave }: { habit?: Habit; onClose: () => 
     unit: habit?.unit || "",
     frequency: habit?.frequency || "daily",
     reminder_time: habit?.reminder_time || "",
+    weight: habit?.weight ?? 5,
+    xp_value: habit?.xp_value ?? 10,
   });
   const [loading, setLoading] = useState(false);
 
@@ -98,6 +102,18 @@ function HabitModal({ habit, onClose, onSave }: { habit?: Habit; onClose: () => 
             <div>
               <label className="text-xs text-muted-foreground mb-1.5 block">Напоминание</label>
               <input type="time" value={form.reminder_time} onChange={e => setForm(f => ({ ...f, reminder_time: e.target.value }))} className="w-full px-3 py-2.5 bg-secondary border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1.5 block">Важность (1-10)</label>
+              <input type="number" min={1} max={10} value={form.weight} onChange={e => setForm(f => ({ ...f, weight: Number(e.target.value) }))} className="w-full px-3 py-2.5 bg-secondary border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+              <p className="text-[10px] text-muted-foreground mt-1">Влияет на вклад в связанные цели</p>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1.5 block">Награда XP</label>
+              <input type="number" min={1} value={form.xp_value} onChange={e => setForm(f => ({ ...f, xp_value: Number(e.target.value) }))} className="w-full px-3 py-2.5 bg-secondary border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+              <p className="text-[10px] text-muted-foreground mt-1">Опыт за выполнение</p>
             </div>
           </div>
         </div>
@@ -193,9 +209,15 @@ export default function HabitsPage() {
 
   const handleToggle = async (habit: Habit) => {
     const isCompleted = habit.logs.some(l => l.date === today && l.completed);
-    await habitsAPI.toggle(habit.id, { date: today, completed: !isCompleted });
+    const res = await habitsAPI.toggle(habit.id, { date: today, completed: !isCompleted });
     load();
-    if (!isCompleted) toast.success(`${habit.icon} ${habit.title} — выполнено!`);
+    if (!isCompleted) {
+      toast.success(`${habit.icon} ${habit.title} — выполнено! +${res.data.xp_gained} XP`);
+      useAuthStore.getState().updateUser({ xp: res.data.user_xp } as any);
+      if (res.data.newly_unlocked?.length) showAchievementUnlockToasts(res.data.newly_unlocked);
+    } else {
+      useAuthStore.getState().updateUser({ xp: res.data.user_xp } as any);
+    }
   };
 
   const handleDelete = async (id: string) => {

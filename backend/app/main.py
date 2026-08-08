@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, engine, SessionLocal
-from app.routers import auth, goals, habits, tasks, finance, health, journal, dashboard, reports, analytics, users
+from app.routers import auth, goals, habits, tasks, finance, health, journal, dashboard, reports, analytics, users, achievements, reading, gamification
 from app.utils.security import get_password_hash
 from app.config import settings
 from sqlalchemy import text
@@ -37,7 +37,9 @@ app.include_router(journal.router, prefix="/api/v1")
 app.include_router(reports.router, prefix="/api/v1")
 app.include_router(analytics.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")
-app.include_router(users.router, prefix="/api/v1")
+app.include_router(achievements.router, prefix="/api/v1")
+app.include_router(reading.router, prefix="/api/v1")
+app.include_router(gamification.router, prefix="/api/v1")
 
 
 @app.on_event("startup")
@@ -51,6 +53,17 @@ def startup():
             db.commit()
         except Exception:
             db.rollback()
+
+        for stmt in [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS xp INTEGER DEFAULT 0",
+            "ALTER TABLE habits ADD COLUMN IF NOT EXISTS weight FLOAT DEFAULT 5",
+            "ALTER TABLE habits ADD COLUMN IF NOT EXISTS xp_value INTEGER DEFAULT 10",
+        ]:
+            try:
+                db.execute(text(stmt))
+                db.commit()
+            except Exception:
+                db.rollback()
 
         from app.models.user import User
         existing = db.query(User).first()

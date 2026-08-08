@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean, DateTime
+from sqlalchemy import Column, String, Boolean, DateTime, Integer
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 import uuid
@@ -19,6 +19,7 @@ class User(Base):
     theme = Column(String, default="dark")
     target_weight = Column(String, nullable=True)
     language = Column(String, default="ru")
+    xp = Column(Integer, default=0)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, onupdate=func.now())
 
@@ -33,3 +34,5 @@ class User(Base):
     activity_logs = relationship("ActivityLog", back_populates="user", cascade="all, delete-orphan")
     health_logs = relationship("HealthLog", back_populates="user", cascade="all, delete-orphan")
     journal_entries = relationship("JournalEntry", back_populates="user", cascade="all, delete-orphan")
+    achievements = relationship("UserAchievement", back_populates="user", cascade="all, delete-orphan")
+    books = relationship("Book", back_populates="user", cascade="all, delete-orphan")

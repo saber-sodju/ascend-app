@@ -3,26 +3,31 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.database import get_db
 from app.models.goal import Goal, SubGoal, GoalMilestone, GoalStatus
+from app.models.habit import Habit, HabitGoalLink
 from app.models.user import User
-from app.schemas.goal import GoalCreate, GoalUpdate, GoalResponse, SubGoalCreate, SubGoalUpdate, SubGoalResponse, MilestoneCreate, MilestoneResponse
+from app.schemas.goal import (
+    GoalCreate, GoalUpdate, GoalResponse, SubGoalCreate, SubGoalUpdate, SubGoalResponse,
+    MilestoneCreate, MilestoneResponse, HabitLinkRequest,
+)
 from app.routers.deps import get_current_user
+from app.gamification.goal_progress import compute_goal_progress
+from app.gamification.engine import evaluate_achievements
 import uuid
 
 router = APIRouter(prefix="/goals", tags=["goals"])
 
 
-def calc_progress(goal: Goal) -> float:
-    if goal.target_value and goal.target_value > 0:
-        return min(100, round((goal.current_value / goal.target_value) * 100, 1))
-    sub_total = len(goal.sub_goals)
-    if sub_total > 0:
-        return round(sum(1 for s in goal.sub_goals if s.is_completed) / sub_total * 100, 1)
-    return 0
+def maybe_complete_goal(goal: Goal) -> None:
+    if goal.status != GoalStatus.completed and goal.target_value and goal.current_value >= goal.target_value:
+        goal.status = GoalStatus.completed
 
 
 def goal_to_response(goal: Goal) -> GoalResponse:
+    progress = compute_goal_progress(goal)
     data = GoalResponse.model_validate(goal)
-    data.progress_percent = calc_progress(goal)
+    data.progress_percent = progress.percent
+    data.linked_habits = progress.habits
+    data.forecast_date = progress.forecast_date
     return data
 
 
@@ -68,12 +73,14 @@ def update_goal(goal_id: uuid.UUID, data: GoalUpdate, db: Session = Depends(get_
     goal = db.query(Goal).filter(Goal.id == goal_id, Goal.user_id == current_user.id).first()
     if not goal:
         raise HTTPException(status_code=404, detail="Цель не найдена")
+    was_completed = goal.status == GoalStatus.completed
     for field, value in data.model_dump(exclude_none=True).items():
         setattr(goal, field, value)
-    if goal.status != GoalStatus.completed and goal.target_value and goal.current_value >= goal.target_value:
-        goal.status = GoalStatus.completed
+    maybe_complete_goal(goal)
     db.commit()
     db.refresh(goal)
+    if goal.status == GoalStatus.completed and not was_completed:
+        evaluate_achievements(db, current_user)
     return goal_to_response(goal)
 
 
@@ -134,6 +141,35 @@ def add_milestone(goal_id: uuid.UUID, data: MilestoneCreate, db: Session = Depen
     db.commit()
     db.refresh(m)
     return m
+
+
+@router.post("/{goal_id}/link-habit", response_model=GoalResponse)
+def link_habit(goal_id: uuid.UUID, data: HabitLinkRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    goal = db.query(Goal).filter(Goal.id == goal_id, Goal.user_id == current_user.id).first()
+    if not goal:
+        raise HTTPException(status_code=404, detail="Цель не найдена")
+    habit = db.query(Habit).filter(Habit.id == data.habit_id, Habit.user_id == current_user.id).first()
+    if not habit:
+        raise HTTPException(status_code=404, detail="Привычка не найдена")
+    existing = db.query(HabitGoalLink).filter(HabitGoalLink.goal_id == goal_id, HabitGoalLink.habit_id == data.habit_id).first()
+    if existing:
+        existing.impact_weight = data.impact_weight
+    else:
+        db.add(HabitGoalLink(goal_id=goal_id, habit_id=data.habit_id, impact_weight=data.impact_weight))
+    db.commit()
+    db.refresh(goal)
+    return goal_to_response(goal)
+
+
+@router.delete("/{goal_id}/link-habit/{habit_id}", response_model=GoalResponse)
+def unlink_habit(goal_id: uuid.UUID, habit_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    goal = db.query(Goal).filter(Goal.id == goal_id, Goal.user_id == current_user.id).first()
+    if not goal:
+        raise HTTPException(status_code=404, detail="Цель не найдена")
+    db.query(HabitGoalLink).filter(HabitGoalLink.goal_id == goal_id, HabitGoalLink.habit_id == habit_id).delete()
+    db.commit()
+    db.refresh(goal)
+    return goal_to_response(goal)
 
 
 @router.delete("/clear")

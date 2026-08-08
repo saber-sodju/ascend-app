@@ -13,7 +13,7 @@ class TransactionType(str, enum.Enum):
 
 
 INCOME_CATEGORIES = ["salary", "scholarship", "freelance", "investment", "gift", "other"]
-EXPENSE_CATEGORIES = ["food", "transport", "education", "shopping", "subscriptions", "entertainment", "health", "bills", "other"]
+EXPENSE_CATEGORIES = ["food", "transport", "education", "shopping", "subscriptions", "entertainment", "health", "bills", "wants", "other"]
 
 
 class Transaction(Base):

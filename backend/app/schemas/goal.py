@@ -5,6 +5,15 @@ from app.models.goal import GoalCategory, GoalPriority, GoalStatus
 import uuid
 
 
+class LinkedHabitInfo(BaseModel):
+    habit_id: str
+    title: str
+    icon: str
+    weight: float
+    completion_rate_percent: float
+    done_today: bool
+
+
 class SubGoalBase(BaseModel):
     title: str
     is_completed: bool = False
@@ -82,11 +91,18 @@ class GoalUpdate(BaseModel):
     emoji: Optional[str] = None
 
 
+class HabitLinkRequest(BaseModel):
+    habit_id: uuid.UUID
+    impact_weight: Optional[float] = None
+
+
 class GoalResponse(GoalBase):
     id: uuid.UUID
     user_id: uuid.UUID
     status: GoalStatus
     progress_percent: float = 0
+    linked_habits: List[LinkedHabitInfo] = []
+    forecast_date: Optional[date] = None
     sub_goals: List[SubGoalResponse] = []
     milestones: List[MilestoneResponse] = []
     created_at: datetime

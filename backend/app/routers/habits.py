@@ -6,38 +6,14 @@ from datetime import date, timedelta
 from app.database import get_db
 from app.models.habit import Habit, HabitLog
 from app.models.user import User
-from app.schemas.habit import HabitCreate, HabitUpdate, HabitResponse, HabitLogResponse, HabitToggleRequest
+from app.schemas.habit import HabitCreate, HabitUpdate, HabitResponse, HabitLogResponse, HabitToggleRequest, HabitToggleResponse
 from app.routers.deps import get_current_user
+from app.utils.streaks import calculate_streak
+from app.gamification.engine import evaluate_achievements
+from app.gamification.leveling import level_from_xp
 import uuid
 
 router = APIRouter(prefix="/habits", tags=["habits"])
-
-
-def calculate_streak(logs: List[HabitLog]) -> tuple[int, int]:
-    if not logs:
-        return 0, 0
-    sorted_logs = sorted([l for l in logs if l.completed], key=lambda x: x.date, reverse=True)
-    if not sorted_logs:
-        return 0, 0
-    current = 0
-    today = date.today()
-    check = today
-    for log in sorted_logs:
-        if log.date == check or log.date == check - timedelta(days=1):
-            current += 1
-            check = log.date - timedelta(days=1)
-        else:
-            break
-    longest = 0
-    current_run = 1
-    for i in range(1, len(sorted_logs)):
-        if (sorted_logs[i - 1].date - sorted_logs[i].date).days == 1:
-            current_run += 1
-            longest = max(longest, current_run)
-        else:
-            current_run = 1
-    longest = max(longest, current_run)
-    return current, longest
 
 
 def habit_to_response(habit: Habit) -> HabitResponse:
@@ -98,24 +74,44 @@ def delete_habit(habit_id: uuid.UUID, db: Session = Depends(get_db), current_use
     return {"message": "Привычка удалена"}
 
 
-@router.post("/{habit_id}/toggle", response_model=HabitLogResponse)
+@router.post("/{habit_id}/toggle", response_model=HabitToggleResponse)
 def toggle_habit(habit_id: uuid.UUID, data: HabitToggleRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     habit = db.query(Habit).filter(Habit.id == habit_id, Habit.user_id == current_user.id).first()
     if not habit:
         raise HTTPException(status_code=404, detail="Привычка не найдена")
     existing = db.query(HabitLog).filter(HabitLog.habit_id == habit_id, HabitLog.date == data.date).first()
+    was_completed = existing.completed if existing else False
+
     if existing:
         existing.completed = data.completed
         existing.value = data.value
         existing.notes = data.notes
-        db.commit()
-        db.refresh(existing)
-        return existing
-    log = HabitLog(habit_id=habit_id, date=data.date, completed=data.completed, value=data.value, notes=data.notes)
-    db.add(log)
+        log = existing
+    else:
+        log = HabitLog(habit_id=habit_id, date=data.date, completed=data.completed, value=data.value, notes=data.notes)
+        db.add(log)
+
+    xp_gained = 0
+    if data.completed and not was_completed:
+        xp_gained = habit.xp_value
+        current_user.xp = (current_user.xp or 0) + xp_gained
+    elif was_completed and not data.completed:
+        xp_gained = -habit.xp_value
+        current_user.xp = max(0, (current_user.xp or 0) + xp_gained)
+
     db.commit()
     db.refresh(log)
-    return log
+
+    newly_unlocked = evaluate_achievements(db, current_user)
+    db.refresh(current_user)
+
+    return HabitToggleResponse(
+        log=log,
+        xp_gained=xp_gained,
+        user_xp=current_user.xp,
+        level_info=level_from_xp(current_user.xp),
+        newly_unlocked=newly_unlocked,
+    )
 
 
 @router.get("/{habit_id}/logs", response_model=List[HabitLogResponse])

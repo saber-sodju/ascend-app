@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict
 from datetime import date, datetime
 from app.models.habit import HabitFrequency
+from app.schemas.achievement import UnlockedAchievementResponse, LevelInfoResponse
 import uuid
 
 
@@ -35,6 +36,8 @@ class HabitBase(BaseModel):
     color: str = "#6366f1"
     icon: str = "⭐"
     reminder_time: Optional[str] = None
+    weight: float = 5
+    xp_value: int = 10
 
 
 class HabitCreate(HabitBase):
@@ -52,6 +55,8 @@ class HabitUpdate(BaseModel):
     icon: Optional[str] = None
     is_active: Optional[bool] = None
     reminder_time: Optional[str] = None
+    weight: Optional[float] = None
+    xp_value: Optional[int] = None
 
 
 class HabitResponse(HabitBase):
@@ -73,3 +78,11 @@ class HabitToggleRequest(BaseModel):
     completed: bool = True
     value: float = 1
     notes: Optional[str] = None
+
+
+class HabitToggleResponse(BaseModel):
+    log: HabitLogResponse
+    xp_gained: int
+    user_xp: int
+    level_info: LevelInfoResponse
+    newly_unlocked: List[UnlockedAchievementResponse] = []

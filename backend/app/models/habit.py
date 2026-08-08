@@ -28,11 +28,14 @@ class Habit(Base):
     icon = Column(String(50), default="⭐")
     is_active = Column(Boolean, default=True)
     reminder_time = Column(String(5), nullable=True)
+    weight = Column(Float, default=5)
+    xp_value = Column(Integer, default=10)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, onupdate=func.now())
 
     user = relationship("User", back_populates="habits")
     logs = relationship("HabitLog", back_populates="habit", cascade="all, delete-orphan")
+    goal_links = relationship("HabitGoalLink", back_populates="habit", cascade="all, delete-orphan")
 
 
 class HabitLog(Base):
@@ -47,3 +50,16 @@ class HabitLog(Base):
     created_at = Column(DateTime, server_default=func.now())
 
     habit = relationship("Habit", back_populates="logs")
+
+
+class HabitGoalLink(Base):
+    __tablename__ = "habit_goal_links"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    habit_id = Column(GUID(), ForeignKey("habits.id"), nullable=False)
+    goal_id = Column(GUID(), ForeignKey("goals.id"), nullable=False)
+    impact_weight = Column(Float, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    habit = relationship("Habit", back_populates="goal_links")
+    goal = relationship("Goal", back_populates="habit_links")

@@ -10,6 +10,7 @@ from app.models.finance import Transaction, TransactionType
 from app.models.health import WeightLog, HealthLog
 from app.models.journal import JournalEntry
 from app.routers.deps import get_current_user
+from app.utils.streaks import calculate_streak
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
@@ -43,21 +44,12 @@ def get_productivity_analytics(days: int = 30, db: Session = Depends(get_db), cu
 def get_habits_analytics(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     habits = db.query(Habit).filter(Habit.user_id == current_user.id).all()
     result = []
-    today = date.today()
     for h in habits:
         total = len(h.logs)
         completed = len([l for l in h.logs if l.completed])
         rate = round(completed / total * 100, 1) if total else 0
-        logs_sorted = sorted([l for l in h.logs if l.completed], key=lambda x: x.date, reverse=True)
-        streak = 0
-        check = today
-        for log in logs_sorted:
-            if log.date == check or log.date == check - timedelta(days=1):
-                streak += 1
-                check = log.date - timedelta(days=1)
-            else:
-                break
-        result.append({"id": str(h.id), "title": h.title, "icon": h.icon, "color": h.color, "total_logs": total, "completed": completed, "rate": rate, "streak": streak, "is_active": h.is_active})
+        streak, longest_streak = calculate_streak(h.logs)
+        result.append({"id": str(h.id), "title": h.title, "icon": h.icon, "color": h.color, "total_logs": total, "completed": completed, "rate": rate, "streak": streak, "longest_streak": longest_streak, "is_active": h.is_active})
     return result
 
 

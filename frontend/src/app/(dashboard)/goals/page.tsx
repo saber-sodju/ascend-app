@@ -1,12 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
-import { goalsAPI } from "@/lib/api";
-import { Goal, GoalCategory, GoalStatus, Priority } from "@/types";
+import { goalsAPI, habitsAPI } from "@/lib/api";
+import { Goal, GoalCategory, GoalStatus, Priority, Habit } from "@/types";
 import { GOAL_CATEGORIES, STATUS_CONFIG, PRIORITY_CONFIG, formatDate, cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 import {
   Plus, Target, Trash2, Edit3, ChevronRight, CheckCircle2,
-  Circle, Calendar, Flag, Filter, X, Loader2, Check,
+  Circle, Calendar, Flag, Filter, X, Loader2, Check, Link2, Unlink, TrendingUp,
 } from "lucide-react";
 
 const STATUS_OPTIONS = [
@@ -148,13 +148,28 @@ function GoalModal({ goal, onClose, onSave }: { goal?: Goal; onClose: () => void
   );
 }
 
-function GoalCard({ goal, onEdit, onDelete, onRefresh }: { goal: Goal; onEdit: () => void; onDelete: () => void; onRefresh: () => void }) {
+function GoalCard({ goal, allHabits, onEdit, onDelete, onRefresh }: { goal: Goal; allHabits: Habit[]; onEdit: () => void; onDelete: () => void; onRefresh: () => void }) {
   const cat = GOAL_CATEGORIES[goal.category];
   const sc = STATUS_CONFIG[goal.status];
   const pc = PRIORITY_CONFIG[goal.priority];
+  const [showLinker, setShowLinker] = useState(false);
 
   const toggleSubGoal = async (sgId: string, completed: boolean) => {
     await goalsAPI.updateSubGoal(goal.id, sgId, { is_completed: completed });
+    onRefresh();
+  };
+
+  const linkedIds = new Set(goal.linked_habits.map(h => h.habit_id));
+  const linkableHabits = allHabits.filter(h => h.is_active && !linkedIds.has(h.id));
+
+  const linkHabit = async (habitId: string) => {
+    await goalsAPI.linkHabit(goal.id, habitId);
+    setShowLinker(false);
+    onRefresh();
+  };
+
+  const unlinkHabit = async (habitId: string) => {
+    await goalsAPI.unlinkHabit(goal.id, habitId);
     onRefresh();
   };
 
@@ -204,6 +219,48 @@ function GoalCard({ goal, onEdit, onDelete, onRefresh }: { goal: Goal; onEdit: (
         </div>
       )}
 
+      {/* Linked habits */}
+      <div className="mt-3 pt-3 border-t border-border/60">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Связанные привычки</span>
+          <button onClick={() => setShowLinker(s => !s)} className="p-1 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
+            <Link2 className="w-3 h-3" />
+          </button>
+        </div>
+        {goal.linked_habits.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            {goal.linked_habits.map(h => (
+              <button key={h.habit_id} onClick={() => unlinkHabit(h.habit_id)} title="Отвязать" className={cn("group/h flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-full border", h.done_today ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400" : "border-border text-muted-foreground")}>
+                {h.done_today ? <CheckCircle2 className="w-3 h-3" /> : <Circle className="w-3 h-3" />}
+                <span>{h.icon} {h.title}</span>
+                <Unlink className="w-2.5 h-2.5 opacity-0 group-hover/h:opacity-100 transition-opacity" />
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="text-[11px] text-muted-foreground">Не связано ни с одной привычкой</p>
+        )}
+        {showLinker && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {linkableHabits.length === 0 ? (
+              <p className="text-[11px] text-muted-foreground">Нет доступных привычек</p>
+            ) : (
+              linkableHabits.map(h => (
+                <button key={h.id} onClick={() => linkHabit(h.id)} className="text-[11px] px-2 py-1 rounded-full border border-dashed border-border hover:border-solid hover:bg-secondary transition-all">
+                  + {h.icon} {h.title}
+                </button>
+              ))
+            )}
+          </div>
+        )}
+        {goal.forecast_date && goal.status !== "completed" && (
+          <div className="flex items-center gap-1.5 mt-2 text-[11px] text-indigo-400">
+            <TrendingUp className="w-3 h-3" />
+            <span>Прогноз: {formatDate(goal.forecast_date)}</span>
+          </div>
+        )}
+      </div>
+
       {goal.deadline && (
         <div className="flex items-center gap-1.5 mt-3 text-xs text-muted-foreground">
           <Calendar className="w-3 h-3" />
@@ -216,6 +273,7 @@ function GoalCard({ goal, onEdit, onDelete, onRefresh }: { goal: Goal; onEdit: (
 
 export default function GoalsPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [allHabits, setAllHabits] = useState<Habit[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editGoal, setEditGoal] = useState<Goal | undefined>();
@@ -233,6 +291,7 @@ export default function GoalsPage() {
   };
 
   useEffect(() => { load(); }, [filterStatus, filterCat]);
+  useEffect(() => { habitsAPI.list(true).then(res => setAllHabits(res.data)); }, []);
 
   const handleDelete = async (id: string) => {
     if (!confirm("Удалить цель?")) return;
@@ -320,7 +379,7 @@ export default function GoalsPage() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                   {catGoals.map(goal => (
-                    <GoalCard key={goal.id} goal={goal} onEdit={() => { setEditGoal(goal); setShowModal(true); }} onDelete={() => handleDelete(goal.id)} onRefresh={load} />
+                    <GoalCard key={goal.id} goal={goal} allHabits={allHabits} onEdit={() => { setEditGoal(goal); setShowModal(true); }} onDelete={() => handleDelete(goal.id)} onRefresh={load} />
                   ))}
                 </div>
               </div>

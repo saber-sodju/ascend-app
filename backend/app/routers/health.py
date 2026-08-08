@@ -14,6 +14,7 @@ from app.schemas.health import (
     HealthSummary
 )
 from app.routers.deps import get_current_user
+from app.gamification.engine import evaluate_achievements
 import uuid
 
 router = APIRouter(prefix="/health", tags=["health"])
@@ -76,6 +77,7 @@ def create_activity(data: ActivityLogCreate, db: Session = Depends(get_db), curr
     db.add(log)
     db.commit()
     db.refresh(log)
+    evaluate_achievements(db, current_user)
     return log
 
 

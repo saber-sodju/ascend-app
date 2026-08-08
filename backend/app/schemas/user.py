@@ -27,6 +27,7 @@ class UserResponse(UserBase):
     is_admin: bool
     theme: str
     language: str
+    xp: int = 0
     created_at: datetime
 
     class Config:

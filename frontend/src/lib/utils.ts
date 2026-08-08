@@ -87,8 +87,37 @@ export const EXPENSE_CATEGORIES = [
   { value: "entertainment", label: "Развлечения", emoji: "🎮" },
   { value: "health", label: "Здоровье", emoji: "💊" },
   { value: "bills", label: "Счета", emoji: "🏠" },
+  { value: "wants", label: "Хотелки", emoji: "✨" },
   { value: "other", label: "Прочее", emoji: "💸" },
 ];
+
+// Mirrors backend/app/gamification/leveling.py — keep LEVEL_XP_BASE/LEVEL_XP_STEP in sync if that formula changes.
+const LEVEL_XP_BASE = 100;
+const LEVEL_XP_STEP = 50;
+
+export function xpForLevel(level: number): number {
+  if (level <= 1) return 0;
+  const n = level - 1;
+  return n * LEVEL_XP_BASE + (LEVEL_XP_STEP * n * (n - 1)) / 2;
+}
+
+export function levelFromXp(xp: number) {
+  const safeXp = Math.max(0, xp);
+  let level = 1;
+  while (xpForLevel(level + 1) <= safeXp) level++;
+  const floorXp = xpForLevel(level);
+  const nextLevelXp = xpForLevel(level + 1);
+  const span = nextLevelXp - floorXp;
+  const progressPercent = span ? Math.round(((safeXp - floorXp) / span) * 1000) / 10 : 100;
+  return { level, xp: safeXp, floorXp, nextLevelXp, progressPercent };
+}
+
+export const RARITY_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
+  common: { label: "Обычное", color: "text-slate-300", bg: "bg-slate-400/10", border: "border-slate-400/30" },
+  rare: { label: "Редкое", color: "text-blue-400", bg: "bg-blue-400/10", border: "border-blue-400/30" },
+  epic: { label: "Эпическое", color: "text-purple-400", bg: "bg-purple-400/10", border: "border-purple-400/30" },
+  legendary: { label: "Легендарное", color: "text-amber-400", bg: "bg-amber-400/10", border: "border-amber-400/30" },
+};
 
 export const ACTIVITY_TYPES = [
   { value: "running", label: "Бег", emoji: "🏃" },

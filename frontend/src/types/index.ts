@@ -7,6 +7,7 @@ export interface User {
   is_admin: boolean;
   theme: string;
   language: string;
+  xp: number;
   created_at: string;
 }
 
@@ -26,10 +27,21 @@ export interface Goal {
   color: string;
   emoji: string | null;
   progress_percent: number;
+  linked_habits: LinkedHabitInfo[];
+  forecast_date: string | null;
   sub_goals: SubGoal[];
   milestones: Milestone[];
   created_at: string;
   updated_at: string | null;
+}
+
+export interface LinkedHabitInfo {
+  habit_id: string;
+  title: string;
+  icon: string;
+  weight: number;
+  completion_rate_percent: number;
+  done_today: boolean;
 }
 
 export interface SubGoal {
@@ -67,6 +79,8 @@ export interface Habit {
   icon: string;
   is_active: boolean;
   reminder_time: string | null;
+  weight: number;
+  xp_value: number;
   current_streak: number;
   longest_streak: number;
   completion_rate: number;
@@ -241,4 +255,79 @@ export interface HealthSummary {
   avg_sleep: number | null;
   avg_water: number | null;
   avg_energy: number | null;
+}
+
+export type Rarity = "common" | "rare" | "epic" | "legendary";
+
+export interface Achievement {
+  key: string;
+  name: string;
+  description: string;
+  icon: string;
+  rarity: Rarity;
+  category: string;
+  progress_current: number;
+  progress_target: number;
+  unlocked_at: string | null;
+}
+
+export interface UnlockedAchievement {
+  key: string;
+  name: string;
+  description: string;
+  icon: string;
+  rarity: Rarity;
+  xp_bonus: number;
+}
+
+export interface LevelInfo {
+  level: number;
+  xp: number;
+  floor_xp: number;
+  next_level_xp: number;
+  progress_percent: number;
+}
+
+export interface HabitToggleResult {
+  log: HabitLog;
+  xp_gained: number;
+  user_xp: number;
+  level_info: LevelInfo;
+  newly_unlocked: UnlockedAchievement[];
+}
+
+export type BookStatus = "reading" | "completed";
+
+export interface Book {
+  id: string;
+  user_id: string;
+  title: string;
+  author: string | null;
+  status: BookStatus;
+  started_at: string | null;
+  finished_at: string | null;
+  rating: number | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface HabitStatSummary {
+  habit_id: string;
+  title: string;
+  icon: string;
+  completion_rate: number;
+  current_streak: number;
+}
+
+export interface GamificationStats {
+  best_habits: HabitStatSummary[];
+  worst_habits: HabitStatSummary[];
+  average_completion_rate: number;
+  best_current_streak: number;
+  best_longest_streak: number;
+  achievements_unlocked: number;
+  achievements_total: number;
+  goals_completed: number;
+  xp: number;
+  level_info: LevelInfo;
 }

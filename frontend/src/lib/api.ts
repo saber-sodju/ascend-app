@@ -41,6 +41,7 @@ export const clearAPI = {
   finance: () => api.delete("/finance/clear"),
   health: () => api.delete("/health/clear"),
   journal: () => api.delete("/journal/clear"),
+  reading: () => api.delete("/reading/clear"),
 };
 
 // Users (admin)
@@ -67,6 +68,9 @@ export const goalsAPI = {
   updateSubGoal: (goalId: string, sgId: string, data: any) => api.put(`/goals/${goalId}/sub-goals/${sgId}`, data),
   deleteSubGoal: (goalId: string, sgId: string) => api.delete(`/goals/${goalId}/sub-goals/${sgId}`),
   addMilestone: (goalId: string, data: any) => api.post(`/goals/${goalId}/milestones`, data),
+  linkHabit: (goalId: string, habitId: string, impactWeight?: number) =>
+    api.post(`/goals/${goalId}/link-habit`, { habit_id: habitId, impact_weight: impactWeight }),
+  unlinkHabit: (goalId: string, habitId: string) => api.delete(`/goals/${goalId}/link-habit/${habitId}`),
 };
 
 // Habits
@@ -148,4 +152,22 @@ export const analyticsAPI = {
   finance: (year?: number) => api.get("/analytics/finance", { params: { year } }),
   health: (days?: number) => api.get("/analytics/health", { params: { days } }),
   goals: () => api.get("/analytics/goals"),
+};
+
+// Achievements
+export const achievementsAPI = {
+  list: () => api.get("/achievements"),
+};
+
+// Reading
+export const readingAPI = {
+  list: () => api.get("/reading"),
+  create: (data: any) => api.post("/reading", data),
+  update: (id: string, data: any) => api.put(`/reading/${id}`, data),
+  delete: (id: string) => api.delete(`/reading/${id}`),
+};
+
+// Gamification
+export const gamificationAPI = {
+  stats: () => api.get("/gamification/stats"),
 };

@@ -6,9 +6,9 @@ import Link from "next/link";
 import {
   LayoutDashboard, Target, Repeat2, CheckSquare, Wallet,
   Heart, BookOpen, BarChart3, TrendingUp, Settings, LogOut,
-  Menu, X, Users,
+  Menu, X, Users, Trophy, LineChart,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, levelFromXp } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Главная", icon: LayoutDashboard },
@@ -18,6 +18,8 @@ const NAV_ITEMS = [
   { href: "/finance", label: "Финансы", icon: Wallet },
   { href: "/health", label: "Здоровье", icon: Heart },
   { href: "/journal", label: "Дневник", icon: BookOpen },
+  { href: "/achievements", label: "Достижения", icon: Trophy },
+  { href: "/statistics", label: "Статистика", icon: LineChart },
   { href: "/reports", label: "Отчёты", icon: BarChart3 },
   { href: "/analytics", label: "Аналитика", icon: TrendingUp },
 ];
@@ -73,7 +75,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </div>
 
       {/* User */}
-      <div className="flex items-center gap-3 px-3 py-2.5 mb-4 rounded-xl bg-secondary/60">
+      <div className="flex items-center gap-3 px-3 py-2.5 mb-1.5 rounded-xl bg-secondary/60">
         <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center flex-shrink-0">
           <span className="text-xs font-bold text-primary uppercase">
             {(user?.full_name || user?.username || "A").charAt(0)}
@@ -84,6 +86,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <p className="text-[10px] text-muted-foreground">Личный аккаунт</p>
         </div>
       </div>
+
+      {/* XP / Level */}
+      {(() => {
+        const li = levelFromXp(user?.xp || 0);
+        return (
+          <Link href="/statistics" onClick={() => setSidebarOpen(false)} className="block px-3 py-2 mb-4 rounded-xl bg-secondary/60 hover:bg-secondary transition-colors">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] font-semibold text-foreground">Уровень {li.level}</span>
+              <span className="text-[10px] text-muted-foreground">{li.xp}/{li.nextLevelXp} XP</span>
+            </div>
+            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full transition-all" style={{ width: `${li.progressPercent}%` }} />
+            </div>
+          </Link>
+        );
+      })()}
 
       {/* Nav */}
       <nav className="flex-1 space-y-0.5">

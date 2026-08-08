@@ -56,6 +56,7 @@ class Goal(Base):
     user = relationship("User", back_populates="goals")
     sub_goals = relationship("SubGoal", back_populates="goal", cascade="all, delete-orphan")
     milestones = relationship("GoalMilestone", back_populates="goal", cascade="all, delete-orphan")
+    habit_links = relationship("HabitGoalLink", back_populates="goal", cascade="all, delete-orphan")
 
 
 class SubGoal(Base):
