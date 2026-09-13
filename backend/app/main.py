@@ -79,10 +79,12 @@ def startup():
             db.commit()
             logger.info(f"Created initial admin user: {settings.FIRST_USER_USERNAME}")
         else:
-            # Ensure first user is always admin
+            # Ensure first user is always admin and sync password from env
             if not existing.is_admin:
                 existing.is_admin = True
-                db.commit()
+            existing.hashed_password = get_password_hash(settings.FIRST_USER_PASSWORD)
+            db.commit()
+            logger.info(f"Synced admin password from env: {existing.username}")
     finally:
         db.close()
 
